@@ -2,19 +2,12 @@ package skin_cache
 
 import (
   "os"
-  "image"
   "path"
+  "path/filepath"
   "regexp"
-  "fmt"
 
   "github.com/hugopeixoto/minecraft/profiles"
-  "github.com/hugopeixoto/minecraft/skins"
 )
-
-type Configuration struct {
-  Filename string
-  Convert  func(image.Image) image.Image
-}
 
 type SkinCache struct {
   Directory string
@@ -24,20 +17,30 @@ type SkinCache struct {
 var sizes = []uint{8, 16, 20, 24, 25, 32, 40, 48, 64}
 
 func NewSkinCache(directory string) *SkinCache {
-  sc := SkinCache{
-    directory,
-    []Configuration{Configuration{"full", skins.Full}},
+  absolutePath, err := filepath.Abs(directory)
+  if err != nil {
+    return nil
   }
 
+  sc := SkinCache{absolutePath, []Configuration{FullSkinConfiguration()}}
+
   for _, size := range sizes {
-    sc.Configurations = append(
-      sc.Configurations,
-      Configuration{
-        fmt.Sprintf("head-%v", size),
-        func(src image.Image) image.Image { return skins.CoveredHead(src, size) }})
+    sc.Configurations = append(sc.Configurations, CoveredHeadConfiguration(size))
+  }
+
+  if !sc.IsCached("steve") {
+    sc.cacheURL(sc.SteveDirectory(), "https://minecraft.net/images/char.png")
   }
 
   return &sc
+}
+
+func (sc SkinCache) UserDirectory(uuid string) string {
+  return path.Join(sc.Directory, uuid)
+}
+
+func (sc SkinCache) SteveDirectory() string {
+  return sc.UserDirectory("steve")
 }
 
 func (sc SkinCache) ValidRequest(uuid string, configuration string) bool {
@@ -47,7 +50,7 @@ func (sc SkinCache) ValidRequest(uuid string, configuration string) bool {
   }
 
   for _, conf := range sc.Configurations {
-    if configuration == conf.Filename {
+    if configuration == conf.Basename {
       return true
     }
   }
@@ -55,39 +58,72 @@ func (sc SkinCache) ValidRequest(uuid string, configuration string) bool {
   return false
 }
 
-func (sc SkinCache) Cache(uuid string) error {
-  uuidDirectory := path.Join(sc.Directory, uuid)
+func (sc SkinCache) IsCached(uuid string) bool {
+  _, err := os.Stat(sc.UserDirectory(uuid))
 
-  _, err := os.Stat(uuidDirectory)
-  if err == nil {
+  return err == nil
+}
+
+func (sc SkinCache) ClearCache(uuid string) error {
+  directory := sc.UserDirectory(uuid)
+  fi, err := os.Stat(directory)
+  if err != nil {
+    return err
+  }
+
+  if fi.IsDir() {
+    return os.RemoveAll(directory)
+  } else {
+    // probably a symlink to steve.
+    // Don't remove its contents, just the link.
+    return os.Remove(directory)
+  }
+}
+
+func (sc SkinCache) Cache(uuid string) error {
+  if sc.IsCached(uuid) {
     return nil
   }
 
   profile, err := profiles.Fetch(uuid)
+  if err != nil && err != profiles.NotFoundError {
+    return err
+  }
+
+  if err == profiles.NotFoundError {
+    err = sc.linkToSteve(uuid)
+  } else {
+    err = sc.cacheURL(sc.UserDirectory(uuid), profile.SkinURL)
+  }
+
+  if err != nil {
+    sc.ClearCache(uuid)
+  }
+
+  return err
+}
+
+func (sc SkinCache) cacheURL(directory, url string) error {
+  img, err := fetchHTTPPNG(url)
   if err != nil {
     return err
   }
 
-  img, err := fetchHTTPPNG(profile.SkinURL)
-  if err != nil {
-    return err
-  }
-
-  err = os.Mkdir(uuidDirectory, 0755)
-  if err != nil {
+  err = os.Mkdir(directory, 0755)
+  if err != nil && !os.IsExist(err) {
     return err
   }
 
   for _, config := range sc.Configurations {
-    err = savePng(
-      path.Join(uuidDirectory, config.Filename + ".png"),
-      config.Convert(img))
-
+    err = config.Convert(directory, img)
     if err != nil {
-      os.RemoveAll(uuidDirectory)
       return err
     }
   }
 
   return nil
+}
+
+func (sc SkinCache) linkToSteve(uuid string) error {
+  return os.Symlink(sc.SteveDirectory(), sc.UserDirectory(uuid))
 }

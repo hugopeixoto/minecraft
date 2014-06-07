@@ -31,6 +31,8 @@ type texturesJson struct {
   } `json:"textures"`
 }
 
+var NotFoundError = errors.New("Profile not found")
+
 func Fetch (id string) (*Profile, error) {
   response, err := http.Get(
     "https://sessionserver.mojang.com/session/minecraft/profile/" + id)
@@ -41,14 +43,14 @@ func Fetch (id string) (*Profile, error) {
 
   defer response.Body.Close()
 
+  if response.StatusCode != 200 {
+    return nil, NotFoundError
+  }
+
   var profile profileJson
   err = parseJson(response.Body, &profile)
   if err != nil {
     return nil, err
-  }
-
-  if response.StatusCode != 200 {
-    return nil, errors.New("profile not found")
   }
 
   propertyReader := strings.NewReader(profile.Properties[0].Value)

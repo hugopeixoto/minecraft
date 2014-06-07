@@ -30,8 +30,9 @@ You can retrieve the skin's head, in several resolutions:
 <img src='http://your-server.com:8080/skins/61208bec81194e228b4f510cd9aa6fe0/head-64.png'/>
 ```
 
-And that's it! If the given profile doesn't exist or something goes wrong,
-flayer will respond with `404 Not found`.
+And that's it! If the given profile doesn't exist, it defaults to steve
+(creating a symlink for each uuid). If something else goes wrong, flayer will
+respond with `404 Not found`.
 
 
 ## Webserver integration
@@ -43,8 +44,9 @@ Use `try_files` or `RewriteCond/Rule` to do this.
 ## Missing features
 
 - Currently, the available resolutions are hardcoded. Make this dynamic/configurable.
-- Default to Steve instead of returning a 404.
 - Add a cache sweeper that checks if there are updates for each uuid.
+- Add authentication/authorization, so that we only generate skins for authorized callers.
+- Place all configuration settings in a json file.
 
 
 ## Inspiration
