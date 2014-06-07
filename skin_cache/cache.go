@@ -3,6 +3,7 @@ package skin_cache
 import (
   "os"
   "path"
+  "io/ioutil"
   "path/filepath"
 
   "github.com/hugopeixoto/minecraft/profiles"
@@ -40,6 +41,12 @@ func (sc SkinCache) UserDirectory(uuid string) string {
 
 func (sc SkinCache) SteveDirectory() string {
   return sc.UserDirectory("steve")
+}
+
+func (sc SkinCache) CachedURL(uuid string) (string, error) {
+  bytes, err := ioutil.ReadFile(path.Join(sc.UserDirectory(uuid), "url.txt"))
+
+  return string(bytes), err
 }
 
 func (sc SkinCache) ValidRequest(uuid string, configuration string) bool {
@@ -108,7 +115,12 @@ func (sc SkinCache) cacheURL(directory, url string) error {
   }
 
   err = os.Mkdir(directory, 0755)
-  if err != nil && !os.IsExist(err) {
+  if err != nil {
+    return err
+  }
+
+  err = ioutil.WriteFile(path.Join(directory, "url.txt"), []byte(url), 0644)
+  if err != nil {
     return err
   }
 
