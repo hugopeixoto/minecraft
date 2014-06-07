@@ -9,7 +9,7 @@ Make sure you have `go` installed before running these commands.
 
 ```
 export GOPATH=/some/path
-go install github.com/hugopeixoto/flayer
+go get github.com/hugopeixoto/minecraft/flayer
 /some/path/bin/flayer -cachedir /var/www/assets -listen your-server.com:8080
 ```
 
