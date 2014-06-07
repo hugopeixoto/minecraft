@@ -5,11 +5,14 @@ import (
 	"github.com/gorilla/mux"
   "net/http"
   "path"
+  "time"
+  "log"
 )
 
 type Configuration struct {
   CachePath     string
   ListenAddress string
+  SweepInterval time.Duration
 }
 
 type Webserver struct {
@@ -37,7 +40,17 @@ func (ws *Webserver) Handle(w http.ResponseWriter, r *http.Request) {
 
   ws.Cache.Cache(uuid)
 
-  http.ServeFile(w, r, path.Join(ws.Config.CachePath, uuid, configuration + ".png"))
+  http.ServeFile(w, r, path.Join(ws.Cache.Directory, uuid, configuration + ".png"))
+}
+
+func (ws *Webserver) Sweep() {
+  for {
+    log.Printf("sweeping cache...")
+    skin_cache.Sweep(ws.Cache)
+    log.Printf("sweeping complete.")
+
+    time.Sleep(ws.Config.SweepInterval)
+  }
 }
 
 func (ws *Webserver) Run() error {
@@ -46,5 +59,6 @@ func (ws *Webserver) Run() error {
   r.HandleFunc("/skins/{uuid}/{configuration}.png", ws.Handle)
 	http.Handle("/", r)
 
+  go ws.Sweep()
   return http.ListenAndServe(ws.Config.ListenAddress, nil)
 }

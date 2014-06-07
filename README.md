@@ -10,8 +10,14 @@ Make sure you have `go` installed before running these commands.
 ```
 export GOPATH=/some/path
 go get github.com/hugopeixoto/minecraft/flayer
-/some/path/bin/flayer -cachedir /var/www/assets -listen your-server.com:8080
+/some/path/bin/flayer -cachedir /var/www/assets -listen your-server.com:8080 -interval 24
 ```
+
+
+## Configuration
+
+You can specify the cache location, the listen address for the webserver, and the interval
+in which the cache must be checked for skin updates (in hours).
 
 
 ## API
@@ -44,7 +50,6 @@ Use `try_files` or `RewriteCond/Rule` to do this.
 ## Missing features
 
 - Currently, the available resolutions are hardcoded. Make this dynamic/configurable.
-- Add a cache sweeper that checks if there are updates for each uuid.
 - Add authentication/authorization, so that we only generate skins for authorized callers.
 - Place all configuration settings in a json file.
 
