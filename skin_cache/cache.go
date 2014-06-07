@@ -4,7 +4,6 @@ import (
   "os"
   "path"
   "path/filepath"
-  "regexp"
 
   "github.com/hugopeixoto/minecraft/profiles"
 )
@@ -44,8 +43,7 @@ func (sc SkinCache) SteveDirectory() string {
 }
 
 func (sc SkinCache) ValidRequest(uuid string, configuration string) bool {
-  ok, err := regexp.MatchString("^[a-z0-9]{32}$", uuid)
-  if err != nil || !ok {
+  if !profiles.ValidIdentifier(uuid) {
     return false
   }
 
